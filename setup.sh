@@ -50,21 +50,18 @@ print("  de421.bsp ready.")
 PY
 fi
 
-# ── Lunar texture (optional but recommended) ──────────────────────────────────
+# ── Lunar texture ─────────────────────────────────────────────────────────────
+TEXTURE_URL="https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg"
 if [[ ! -f "$INSTALL_DIR/moon_texture.jpg" ]]; then
-    echo ""
-    echo "┌─────────────────────────────────────────────────────────────────────┐"
-    echo "│  OPTIONAL: install a NASA lunar texture for photorealistic output.  │"
-    echo "│                                                                     │"
-    echo "│  Recommended source — NASA SVS CGI Moon Kit (public domain):        │"
-    echo "│    https://svs.gsfc.nasa.gov/4720                                   │"
-    echo "│                                                                     │"
-    echo "│  Download the color map (any resolution ≥ 2k) and save it as:      │"
-    echo "│    /opt/moonserve/moon_texture.jpg                                  │"
-    echo "│                                                                     │"
-    echo "│  Without it the server uses a built-in synthetic fallback.         │"
-    echo "└─────────────────────────────────────────────────────────────────────┘"
-    echo ""
+    echo "Downloading NASA lunar texture (~447 KB) …"
+    if wget -q -O "$INSTALL_DIR/moon_texture.jpg" "$TEXTURE_URL"; then
+        echo "  Texture ready."
+    else
+        rm -f "$INSTALL_DIR/moon_texture.jpg"
+        echo "  Download failed — will use built-in synthetic texture instead."
+        echo "  To install manually later:"
+        echo "    wget -O $INSTALL_DIR/moon_texture.jpg $TEXTURE_URL"
+    fi
 fi
 
 # ── Permissions ───────────────────────────────────────────────────────────────

@@ -56,14 +56,13 @@ PORT=8080 sudo ./setup.sh
 
 ### Lunar texture
 
-The server works immediately using a built-in synthetic texture (procedural grey sphere with approximate maria). For a photorealistic result, install a real NASA lunar texture:
+`setup.sh` automatically downloads the NASA LROC 2k color map (~447 KB, public domain) from the NASA SVS CGI Moon Kit during installation. If the download fails (no network, firewall, etc.) the server falls back to a built-in synthetic texture and prints instructions for a manual retry:
 
-1. Visit the **NASA SVS CGI Moon Kit** (public domain): https://svs.gsfc.nasa.gov/4720
-2. Download the color map at any resolution ≥ 2k (equirectangular projection, JPG or PNG).
-3. Save it as `/opt/moonserve/moon_texture.jpg`.
-4. Force a regeneration: `sudo systemctl start moonserve.service`
-
-The script detects the texture automatically on the next run.
+```bash
+wget -O /opt/moonserve/moon_texture.jpg \
+  https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+sudo systemctl start moonserve.service   # regenerate immediately
+```
 
 ## Endpoints
 
