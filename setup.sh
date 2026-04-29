@@ -84,7 +84,9 @@ systemctl start moonserve.service \
     || { echo "  Generation failed — check: journalctl -u moonserve.service"; exit 1; }
 
 # ── nginx ─────────────────────────────────────────────────────────────────────
+NGINX_OK=false
 if command -v nginx &>/dev/null; then
+    mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
     CONF=/etc/nginx/sites-available/moonserve
     sed "s/__PORT__/$PORT/g" "$SCRIPT_DIR/nginx-moonserve.conf" > "$CONF"
     ln -sf "$CONF" /etc/nginx/sites-enabled/moonserve
@@ -97,8 +99,9 @@ if command -v nginx &>/dev/null; then
 
     systemctl enable nginx
     if nginx -t 2>&1; then
-        systemctl reload nginx
+        systemctl reload-or-restart nginx
         echo "nginx configured."
+        NGINX_OK=true
     else
         echo "WARNING: nginx config test failed — fix the conflict and run:"
         echo "  sudo nginx -t && sudo systemctl reload nginx"
@@ -112,8 +115,14 @@ fi
 # ── Done ──────────────────────────────────────────────────────────────────────
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
-echo "=== Setup complete ==="
-echo "  Image endpoint: http://${IP}:${PORT}/moon.png"
-echo "  Viewer:         http://${IP}:${PORT}/"
+if $NGINX_OK; then
+    echo "=== Setup complete ==="
+    echo "  Image endpoint: http://${IP}:${PORT}/moon.png"
+    echo "  Viewer:         http://${IP}:${PORT}/"
+else
+    echo "=== Setup complete (nginx not yet configured) ==="
+    echo "  Install/fix nginx, then re-run this script to finish."
+    echo "  Once ready, endpoint will be: http://${IP}:${PORT}/moon.png"
+fi
 echo "  Logs:           journalctl -fu moonserve.service"
 echo "  Force refresh:  sudo systemctl start moonserve.service"

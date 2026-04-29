@@ -22,12 +22,12 @@ A Python script generates the image and nginx serves it as a static file. The tw
 - Raspberry Pi running Raspberry Pi OS, Debian, or Ubuntu
 - Python 3.10+
 - nginx
-- Internet access on first run only (to download the DE421 ephemeris, ~17 MB)
+- Internet access on first run only (to download the DE421 ephemeris ~17 MB and the NASA lunar texture ~447 KB)
 
 ## Installation
 
 ```bash
-sudo apt update && sudo apt install -y python3 python3-venv nginx
+sudo apt update && sudo apt install -y python3 python3-venv nginx wget
 sudo ./setup.sh
 ```
 
@@ -35,7 +35,7 @@ sudo ./setup.sh
 
 - Creates a dedicated `moonserve` system user
 - Creates a Python virtualenv at `/opt/moonserve/venv` and installs dependencies
-- Downloads `de421.bsp` from NASA JPL (~17 MB, needed once)
+- Downloads `de421.bsp` from NASA JPL (~17 MB, needed once) and the NASA LROC lunar texture (~447 KB)
 - Installs and enables the systemd service and timer
 - Generates the first image immediately
 - Installs and activates the nginx site configuration
@@ -91,11 +91,13 @@ sudo systemctl reload nginx
 
 ### Changing the port after install
 
-Edit `/opt/moonserve/venv` — no, just re-run setup with the new port:
+Re-run setup with the new port:
 
 ```bash
 PORT=8080 sudo ./setup.sh
 ```
+
+Note: re-running `setup.sh` also re-copies all files and regenerates the image. Any timer interval changes made with `systemctl edit --full moonserve.timer` will be overwritten. Make interval changes in the source `moonserve.timer` file before re-running, or use `systemctl edit moonserve.timer` (drop-in override) which `setup.sh` will not touch.
 
 ### Generator environment variables
 
@@ -114,13 +116,19 @@ sudo systemctl daemon-reload
 
 ### Regeneration interval
 
-The timer is configured in `moonserve.timer`. To change from 30 minutes to hourly, edit the installed unit:
+The timer is configured in `moonserve.timer`. To change from 30 minutes to hourly, use a drop-in override (this survives re-runs of `setup.sh`):
 
 ```bash
-sudo systemctl edit --full moonserve.timer
-# Change OnUnitActiveSec=30min to OnUnitActiveSec=1h
-sudo systemctl daemon-reload
+sudo systemctl edit moonserve.timer
 ```
+
+Add:
+```ini
+[Timer]
+OnUnitActiveSec=1h
+```
+
+Then reload: `sudo systemctl daemon-reload`
 
 ## File structure
 
@@ -142,7 +150,7 @@ MoonServe/
 /opt/moonserve/
 ├── generate_moon.py       # Deployed copy of the generator
 ├── de421.bsp              # JPL planetary ephemeris (~17 MB, downloaded by setup.sh)
-├── moon_texture.jpg       # NASA lunar texture (user-supplied, optional)
+├── moon_texture.jpg       # NASA lunar texture (downloaded by setup.sh, optional)
 └── venv/                  # Python virtualenv
 
 /var/www/moonserve/
@@ -154,6 +162,9 @@ MoonServe/
 
 /etc/nginx/sites-available/
 └── moonserve              # Rendered nginx config (PORT substituted by setup.sh)
+
+/etc/nginx/sites-enabled/
+└── moonserve -> /etc/nginx/sites-available/moonserve
 ```
 
 ## Accuracy notes

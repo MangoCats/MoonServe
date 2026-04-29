@@ -104,8 +104,12 @@ def get_geometry() -> tuple[float, float, float, float]:
     Returns (sub_earth_lon, sub_earth_lat, sub_solar_lon, sub_solar_lat)
     in selenographic degrees.  The sub-Earth point encodes libration.
     """
+    bsp = DATA_DIR / "de421.bsp"
+    if not bsp.exists():
+        sys.exit(f"ERROR: {bsp} not found — re-run setup.sh to download it.")
+
     loader = Loader(str(DATA_DIR))
-    ts     = loader.timescale()
+    ts     = loader.timescale(builtin=True)
     eph    = loader("de421.bsp")
     t      = ts.now()
 
@@ -202,11 +206,11 @@ def render_moon(
     sun_dir = sph(sub_s_lon, sub_s_lat)
 
     # Pixel grid: x+ = east (right), y+ = north (up)
-    r    = size / 2.0 - 1.0
-    half = size / 2.0
+    disk_r_px = size / 2.0 - 1.0   # disk radius in pixels
+    half      = size / 2.0
     iy, ix = np.mgrid[0:size, 0:size]
-    px   = (ix - half + 0.5) / r
-    py   = (half - iy - 0.5) / r
+    px   = (ix - half + 0.5) / disk_r_px
+    py   = (half - iy - 0.5) / disk_r_px
 
     r2      = px ** 2 + py ** 2
     r_val   = np.sqrt(r2)
@@ -236,7 +240,7 @@ def render_moon(
     )
 
     out_rgb = (color * bright[..., None]).clip(0, 255).astype(np.uint8)
-    alpha   = (np.clip(0.5 + (1.0 - r_val) * r, 0.0, 1.0) * 255).astype(np.uint8)
+    alpha   = (np.clip(0.5 + (1.0 - r_val) * disk_r_px, 0.0, 1.0) * 255).astype(np.uint8)
     return Image.fromarray(np.dstack([out_rgb, alpha]), "RGBA")
 
 
@@ -248,6 +252,7 @@ def main() -> None:
     if TEXTURE_PATH.exists():
         print(f"Loading texture: {TEXTURE_PATH}")
         texture = Image.open(TEXTURE_PATH)
+        texture.load()
     else:
         print("Texture not found — using built-in synthetic fallback.")
         print(f"For a photorealistic image install a NASA equirectangular texture at:")
@@ -270,4 +275,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"FATAL: {e}", file=sys.stderr)
+        sys.exit(1)

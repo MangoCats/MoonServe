@@ -11,3 +11,11 @@ Environment=MOON_DATA=/opt/moonserve
 Environment=MOON_OUTPUT=/var/www/moonserve/moon.png
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=120
+
+# Sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/moonserve /opt/moonserve
