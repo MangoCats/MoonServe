@@ -1,0 +1,13 @@
+[Unit]
+Description=Generate moon phase image
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=moonserve
+ExecStart=/opt/moonserve/venv/bin/python /opt/moonserve/generate_moon.py
+Environment=MOON_DATA=/opt/moonserve
+Environment=MOON_OUTPUT=/var/www/moonserve/moon.png
+StandardOutput=journal
+StandardError=journal
