@@ -91,15 +91,25 @@ if command -v nginx &>/dev/null; then
     CONF=/etc/nginx/sites-available/moonserve
     sed "s/__PORT__/$PORT/g" "$SCRIPT_DIR/nginx-moonserve.conf" > "$CONF"
     ln -sf "$CONF" /etc/nginx/sites-enabled/moonserve
-    if [[ -L /etc/nginx/sites-enabled/default ]]; then
-        echo "Note: default nginx site is active — remove it if it conflicts on port $PORT:"
-        echo "      rm /etc/nginx/sites-enabled/default"
+
+    # The default site uses default_server on port 80; only a conflict if PORT=80.
+    if [[ "$PORT" == "80" ]] && [[ -L /etc/nginx/sites-enabled/default ]]; then
+        echo "Note: default nginx site also claims port 80 — removing it to avoid conflict."
+        rm /etc/nginx/sites-enabled/default
     fi
-    nginx -t && systemctl reload nginx
-    echo "nginx configured."
+
+    systemctl enable nginx
+    if nginx -t 2>&1; then
+        systemctl reload nginx
+        echo "nginx configured."
+    else
+        echo "WARNING: nginx config test failed — fix the conflict and run:"
+        echo "  sudo nginx -t && sudo systemctl reload nginx"
+        echo "(moonserve timer and image generation are running normally)"
+    fi
 else
     echo "nginx not found. Install it: sudo apt install nginx"
-    echo "Then copy nginx-moonserve.conf to /etc/nginx/sites-available/ and reload."
+    echo "Then re-run this script."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
