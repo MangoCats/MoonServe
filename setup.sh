@@ -26,9 +26,15 @@ mkdir -p "$INSTALL_DIR" "$WWW_DIR"
 if [[ ! -x "$INSTALL_DIR/venv/bin/python" ]]; then
     python3 -m venv "$INSTALL_DIR/venv"
 fi
-"$INSTALL_DIR/venv/bin/pip" install --quiet --upgrade pip
-"$INSTALL_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
-echo "Python dependencies installed."
+DEPS_STAMP="$INSTALL_DIR/.deps_installed"
+if [[ ! -f "$DEPS_STAMP" ]] || [[ "$SCRIPT_DIR/requirements.txt" -nt "$DEPS_STAMP" ]]; then
+    "$INSTALL_DIR/venv/bin/pip" install --quiet --upgrade pip
+    "$INSTALL_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
+    touch "$DEPS_STAMP"
+    echo "Python dependencies installed."
+else
+    echo "Python dependencies up to date."
+fi
 
 # ── Copy generator script ─────────────────────────────────────────────────────
 cp "$SCRIPT_DIR/generate_moon.py" "$INSTALL_DIR/"
@@ -36,10 +42,9 @@ cp "$SCRIPT_DIR/generate_moon.py" "$INSTALL_DIR/"
 # ── Download JPL ephemeris (≈17 MB, needed once) ─────────────────────────────
 if [[ ! -f "$INSTALL_DIR/de421.bsp" ]]; then
     echo "Downloading DE421 ephemeris (~17 MB) …"
-    "$INSTALL_DIR/venv/bin/python" - <<'PY'
+    "$INSTALL_DIR/venv/bin/python" - <<PY
 from skyfield.api import Loader
-import os
-load = Loader(os.environ["INSTALL_DIR"])
+load = Loader("$INSTALL_DIR")
 load("de421.bsp")
 print("  de421.bsp ready.")
 PY
@@ -77,8 +82,7 @@ systemctl start moonserve.timer
 echo "systemd timer enabled (runs every 30 min, persists across reboots)."
 
 echo "Generating first image …"
-systemctl start moonserve.service
-systemctl is-active --quiet moonserve.service \
+systemctl start moonserve.service \
     && echo "  Image written to $WWW_DIR/moon.png" \
     || { echo "  Generation failed — check: journalctl -u moonserve.service"; exit 1; }
 
