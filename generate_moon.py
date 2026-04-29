@@ -209,8 +209,9 @@ def render_moon(
     py   = (half - iy - 0.5) / r
 
     r2      = px ** 2 + py ** 2
+    r_val   = np.sqrt(r2)
     on_disk = r2 < 1.0
-    pz      = np.sqrt(np.where(on_disk, 1.0 - r2, 0.0))
+    pz      = np.sqrt(np.clip(1.0 - r2, 0.0, 1.0))
 
     # Each on-disk pixel as a selenographic 3-D unit vector
     Px = px * x_ax[0] + py * y_ax[0] + pz * z_ax[0]
@@ -235,7 +236,7 @@ def render_moon(
     )
 
     out_rgb = (color * bright[..., None]).clip(0, 255).astype(np.uint8)
-    alpha   = np.where(on_disk, 255, 0).astype(np.uint8)
+    alpha   = (np.clip(0.5 + (1.0 - r_val) * r, 0.0, 1.0) * 255).astype(np.uint8)
     return Image.fromarray(np.dstack([out_rgb, alpha]), "RGBA")
 
 
